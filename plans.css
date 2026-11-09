@@ -110,9 +110,10 @@
 .pp-pricing{ padding: 88px 0; }
 .pp-plans{
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 24px;
-  margin-top: 60px;
+  margin: 60px auto 0;
+  max-width: 820px;
   align-items: stretch;
 }
 .pp-plan.price-card{ padding: 34px 26px 28px; text-align: center; }
@@ -174,11 +175,10 @@
 
 @media (max-width: 960px){
   .pp-plans{ grid-template-columns: repeat(2, 1fr); gap: 20px; }
-  .pp-plan-featured{ order: -1; grid-column: span 2; max-width: 460px; width: 100%; justify-self: center; }
 }
 @media (max-width: 640px){
-  .pp-plans{ grid-template-columns: 1fr; }
-  .pp-plan-featured{ grid-column: span 1; max-width: none; }
+  .pp-plans{ grid-template-columns: 1fr; max-width: 460px; }
+  .pp-plan-featured{ order: -1; }
 }
 
 /* ---------- Condition-specific add-ons ---------- */
