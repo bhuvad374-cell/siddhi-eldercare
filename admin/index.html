@@ -105,7 +105,10 @@
   .ta-check{ display:flex; align-items:flex-start; gap:10px; font-size:0.86rem; cursor:pointer; }
   .ta-check input{ margin-top:3px; accent-color:var(--pine); }
   .ta-empty{ text-align:center; color:var(--ink-soft); padding:30px 10px; font-size:0.9rem; }
-  @media (max-width:620px){ .ta-row{ grid-template-columns:1fr; } }
+  .ta-row.cols-1-2{ grid-template-columns:1fr 2fr; }
+  .ta-row.cols-2-1-2{ grid-template-columns:2fr 1fr 2fr; }
+  .ta-row.cols-2-1{ grid-template-columns:2fr 1fr; }
+  @media (max-width:620px){ .ta-row, .ta-row.cols-1-2, .ta-row.cols-2-1-2, .ta-row.cols-2-1{ grid-template-columns:1fr; } }
 
   /* Invoice tool */
   .invoice-toolbar{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
@@ -334,6 +337,14 @@
       renderTestimonialsUI(document.getElementById('editorArea'));
     });
     picker.appendChild(testimonialsBtn);
+    const pricingBtn = document.createElement('button');
+    pricingBtn.textContent = 'Pricing';
+    pricingBtn.addEventListener('click', () => {
+      document.querySelectorAll('.page-picker button').forEach((b) => b.classList.remove('is-active'));
+      pricingBtn.classList.add('is-active');
+      renderPricingUI(document.getElementById('editorArea'));
+    });
+    picker.appendChild(pricingBtn);
 
     const tools = document.getElementById('toolsPicker');
     const toolsLabel = document.createElement('p');
@@ -782,6 +793,281 @@
     });
 
     renderList();
+  }
+
+  // ---------- Pricing manager ----------
+  // Plans and add-ons live in content/plans.json and are rendered into
+  // plans.html at build time (lib/plans.js). Prices are free text on purpose
+  // so "₹79,999", "From ₹4,000" or "On request" all work.
+  const ADDON_ICONS = [['clock', 'Clock'], ['pulse', 'Heartbeat'], ['plus', 'Plus / medical'], ['heart', 'Heart'], ['bag', 'Bag / travel'], ['people', 'People']];
+  const MAX_PLANS = 4;
+  const MAX_ADDONS = 12;
+
+  async function renderPricingUI(container) {
+    container.innerHTML = '<p id="loading">Loading pricing…</p>';
+    let plans = [];
+    let addons = [];
+    try {
+      const res = await api('/api/content?page=plans');
+      plans = Array.isArray(res.data && res.data.plans) ? res.data.plans : [];
+      addons = Array.isArray(res.data && res.data.addons) ? res.data.addons : [];
+    } catch (err) {
+      if (!/does not exist/i.test(err.message)) {
+        container.innerHTML = '<p class="error is-visible">' + escapeHtml(err.message) + '</p>';
+        return;
+      }
+    }
+    plans.forEach((p) => { p._open = false; });
+    addons.forEach((a) => { a._open = false; });
+
+    container.innerHTML = '';
+    const help = tEl('div', 'ta-help');
+    help.innerHTML = '<strong>Pricing page:</strong> edit plan cards and add-ons below, then press <strong>Save changes</strong>. ' +
+      'Prices are plain text, so you can write “₹79,999”, “From ₹4,000 / night” or “On request”. Features and bullet points are one per line.';
+    container.appendChild(help);
+
+    const planTop = tEl('div', 'ta-top');
+    planTop.appendChild(tEl('h2', null, 'Plans'));
+    const addPlanBtn = tEl('button', 'btn', '+ Add plan');
+    addPlanBtn.type = 'button';
+    planTop.appendChild(addPlanBtn);
+    container.appendChild(planTop);
+    const planList = tEl('div', 'ta-list');
+    container.appendChild(planList);
+
+    const addonTop = tEl('div', 'ta-top');
+    addonTop.style.marginTop = '28px';
+    addonTop.appendChild(tEl('h2', null, 'Add-ons'));
+    const addAddonBtn = tEl('button', 'btn', '+ Add add-on');
+    addAddonBtn.type = 'button';
+    addonTop.appendChild(addAddonBtn);
+    container.appendChild(addonTop);
+    const addonList = tEl('div', 'ta-list');
+    container.appendChild(addonList);
+
+    const saveBar = tEl('div', 'save-bar');
+    const saveBtn = tEl('button', 'btn', 'Save changes');
+    saveBtn.type = 'button';
+    saveBar.appendChild(saveBtn);
+    saveBar.appendChild(tEl('span', 'hint', 'Saved changes go live automatically within about a minute.'));
+    const viewLink = tEl('a', 'hint', 'View page ↗');
+    viewLink.href = '/plans.html';
+    viewLink.target = '_blank';
+    viewLink.rel = 'noopener';
+    saveBar.appendChild(viewLink);
+    container.appendChild(saveBar);
+    const okEl = tEl('p', 'success');
+    const errEl = tEl('p', 'error');
+    container.appendChild(okEl);
+    container.appendChild(errEl);
+
+    // Generic list builder shared by plans and add-ons.
+    function buildCard(list, arr, i, cfg) {
+      const r = arr[i];
+      const item = tEl('div', 'group ta-item');
+      const head = tEl('div', 'ta-head');
+      const title = tEl('div', 'ta-title');
+      const nameEl = tEl('strong');
+      const metaEl = tEl('span', 'ta-meta');
+      title.appendChild(nameEl);
+      title.appendChild(metaEl);
+      const badges = tEl('div', 'ta-badges');
+      const controls = tEl('div', 'ta-controls');
+
+      function mk(label, cls, handler, disabled, aria) {
+        const b = tEl('button', cls, label);
+        b.type = 'button';
+        if (aria) b.setAttribute('aria-label', aria);
+        b.disabled = !!disabled;
+        b.addEventListener('click', handler);
+        return b;
+      }
+      function refresh() {
+        nameEl.textContent = cfg.title(r) || cfg.untitled;
+        metaEl.textContent = cfg.meta(r);
+        badges.innerHTML = '';
+        if (r.featured) badges.appendChild(tEl('span', 'ta-badge featured', 'Featured'));
+        if (r.visible === false) badges.appendChild(tEl('span', 'ta-badge hidden', 'Hidden'));
+      }
+
+      const panel = tEl('div', 'ta-panel');
+      panel.hidden = !r._open;
+      const editBtn = mk(r._open ? 'Close' : 'Edit', '', () => {
+        r._open = !r._open;
+        panel.hidden = !r._open;
+        editBtn.textContent = r._open ? 'Close' : 'Edit';
+      });
+      controls.appendChild(mk('↑', '', () => { arr.splice(i - 1, 0, arr.splice(i, 1)[0]); cfg.rerender(); }, i === 0, 'Move up'));
+      controls.appendChild(mk('↓', '', () => { arr.splice(i + 1, 0, arr.splice(i, 1)[0]); cfg.rerender(); }, i === arr.length - 1, 'Move down'));
+      controls.appendChild(editBtn);
+      controls.appendChild(mk('Delete', 'ta-del', () => {
+        if (!window.confirm('Delete “' + (cfg.title(r) || cfg.untitled) + '”? It is removed from the site once you save.')) return;
+        arr.splice(i, 1);
+        cfg.rerender();
+      }));
+      head.appendChild(title);
+      head.appendChild(badges);
+      head.appendChild(controls);
+      item.appendChild(head);
+
+      function textField(label, key, opts) {
+        opts = opts || {};
+        const f = tEl('div', 'field');
+        f.appendChild(tEl('label', null, label));
+        const input = document.createElement(opts.area ? 'textarea' : 'input');
+        if (!opts.area) input.type = 'text';
+        input.value = r[key] || '';
+        if (opts.placeholder) input.placeholder = opts.placeholder;
+        if (opts.max) input.maxLength = opts.max;
+        input.addEventListener('input', () => { r[key] = input.value; refresh(); });
+        f.appendChild(input);
+        if (opts.note) f.appendChild(tEl('p', 'ta-note', opts.note));
+        return f;
+      }
+      function listField(label, key, opts) {
+        opts = opts || {};
+        const f = tEl('div', 'field');
+        f.appendChild(tEl('label', null, label));
+        const input = document.createElement('textarea');
+        input.rows = opts.rows || 6;
+        input.value = (Array.isArray(r[key]) ? r[key] : []).join('\n');
+        input.placeholder = opts.placeholder || '';
+        input.addEventListener('input', () => { r[key] = input.value.split('\n'); });
+        f.appendChild(input);
+        f.appendChild(tEl('p', 'ta-note', 'One per line. Empty lines are ignored.'));
+        return f;
+      }
+      function checkbox(label, key, invert, onChange) {
+        const wrap = tEl('label', 'ta-check');
+        const box = document.createElement('input');
+        box.type = 'checkbox';
+        box.checked = invert ? r[key] !== false : !!r[key];
+        box.addEventListener('change', () => { r[key] = box.checked; refresh(); if (onChange) onChange(); });
+        wrap.appendChild(box);
+        wrap.appendChild(tEl('span', null, label));
+        return wrap;
+      }
+      cfg.fill(panel, { textField, listField, checkbox, r, refresh });
+      item.appendChild(panel);
+      refresh();
+      list.appendChild(item);
+    }
+
+    function renderPlans() {
+      planList.innerHTML = '';
+      addPlanBtn.disabled = plans.length >= MAX_PLANS;
+      if (!plans.length) planList.appendChild(tEl('p', 'ta-empty', 'No plans yet. Click “+ Add plan”.'));
+      plans.forEach((p, i) => buildCard(planList, plans, i, {
+        untitled: 'New plan',
+        rerender: renderPlans,
+        title: (x) => [x.brand, x.name].filter(Boolean).join(' '),
+        meta: (x) => [x.price, x.unit].filter(Boolean).join(' '),
+        fill(panel, h) {
+          const row = tEl('div', 'ta-row');
+          row.classList.add('cols-1-2');
+          row.appendChild(h.textField('Brand (small text above name)', 'brand', { max: 30, placeholder: 'e.g. SIDDHI' }));
+          row.appendChild(h.textField('Plan name *', 'name', { max: 60, placeholder: 'e.g. Care Plus Plan' }));
+          panel.appendChild(row);
+          panel.appendChild(h.textField('Tagline', 'tagline', { max: 120, placeholder: 'e.g. For parents who need steady, everyday support' }));
+          const row2 = tEl('div', 'ta-row');
+          row2.classList.add('cols-2-1-2');
+          row2.appendChild(h.textField('Price *', 'price', { max: 40, placeholder: '₹79,999' }));
+          row2.appendChild(h.textField('Unit', 'unit', { max: 30, placeholder: '/year' }));
+          row2.appendChild(h.textField('Small note under price', 'note', { max: 80, placeholder: '15 visits included' }));
+          panel.appendChild(row2);
+          panel.appendChild(h.textField('Short description', 'description', { area: true, max: 300 }));
+          panel.appendChild(h.listField('Features', 'features', { rows: 8, placeholder: '15 care visits per year\n4 hours per visit' }));
+          panel.appendChild(h.textField('Ribbon text (shown on the featured plan only)', 'ribbon', { max: 30, placeholder: 'Best Value' }));
+          const checks = tEl('div', 'ta-checks');
+          checks.appendChild(h.checkbox('Show on the website', 'visible', true));
+          checks.appendChild(h.checkbox('Featured — highlighted card (only one at a time)', 'featured', false, () => {
+            if (h.r.featured) plans.forEach((o) => { if (o !== h.r) o.featured = false; });
+            renderPlans();
+          }));
+          panel.appendChild(checks);
+        },
+      }));
+    }
+
+    function renderAddons() {
+      addonList.innerHTML = '';
+      addAddonBtn.disabled = addons.length >= MAX_ADDONS;
+      if (!addons.length) addonList.appendChild(tEl('p', 'ta-empty', 'No add-ons yet. Click “+ Add add-on”.'));
+      addons.forEach((a, i) => buildCard(addonList, addons, i, {
+        untitled: 'New add-on',
+        rerender: renderAddons,
+        title: (x) => x.title,
+        meta: (x) => x.price || 'No price shown',
+        fill(panel, h) {
+          const row = tEl('div', 'ta-row');
+          row.classList.add('cols-2-1');
+          row.appendChild(h.textField('Title *', 'title', { max: 80, placeholder: 'e.g. Overnight Care' }));
+          const iconField = tEl('div', 'field');
+          iconField.appendChild(tEl('label', null, 'Icon'));
+          const sel = document.createElement('select');
+          ADDON_ICONS.forEach(([v, label]) => {
+            const o = document.createElement('option');
+            o.value = v; o.textContent = label;
+            if ((h.r.icon || 'plus') === v) o.selected = true;
+            sel.appendChild(o);
+          });
+          sel.addEventListener('change', () => { h.r.icon = sel.value; });
+          iconField.appendChild(sel);
+          row.appendChild(iconField);
+          panel.appendChild(row);
+          panel.appendChild(h.textField('Price (optional)', 'price', { max: 60, placeholder: 'e.g. From ₹4,000 / night — leave blank to hide', note: 'Shown on the card above the bullet points.' }));
+          panel.appendChild(h.textField('Quote line', 'quote', { max: 200, placeholder: 'Shown in italics; quotation marks are added for you.' }));
+          panel.appendChild(h.listField('Bullet points', 'bullets', { rows: 5 }));
+          const checks = tEl('div', 'ta-checks');
+          checks.appendChild(h.checkbox('Show on the website', 'visible', true));
+          panel.appendChild(checks);
+        },
+      }));
+    }
+
+    addPlanBtn.addEventListener('click', () => {
+      plans.push({ id: '', brand: 'SIDDHI', name: '', tagline: '', price: '', unit: '/year', note: '', description: '', features: [], featured: false, ribbon: '', visible: true, _open: true });
+      renderPlans();
+    });
+    addAddonBtn.addEventListener('click', () => {
+      addons.push({ id: '', icon: 'plus', title: '', quote: '', bullets: [], price: '', visible: true, _open: true });
+      renderAddons();
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      okEl.classList.remove('is-visible');
+      errEl.classList.remove('is-visible');
+      function fail(msg, arr, idx, rerender) {
+        arr[idx]._open = true;
+        rerender();
+        errEl.textContent = msg;
+        errEl.classList.add('is-visible');
+      }
+      for (let i = 0; i < plans.length; i++) {
+        if (!String(plans[i].name || '').trim()) return fail('Plan ' + (i + 1) + ': add a plan name.', plans, i, renderPlans);
+        if (!String(plans[i].price || '').trim()) return fail('Plan ' + (i + 1) + ': add a price.', plans, i, renderPlans);
+      }
+      for (let i = 0; i < addons.length; i++) {
+        if (!String(addons[i].title || '').trim()) return fail('Add-on ' + (i + 1) + ': add a title.', addons, i, renderAddons);
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        const strip = (o) => { const c = Object.assign({}, o); delete c._open; return c; };
+        const res = await api('/api/content', { method: 'POST', body: JSON.stringify({ page: 'plans', data: { plans: plans.map(strip), addons: addons.map(strip) } }) });
+        okEl.textContent = res.message || 'Saved.';
+        okEl.classList.add('is-visible');
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.add('is-visible');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save changes';
+      }
+    });
+
+    renderPlans();
+    renderAddons();
   }
 
   // ---------- Invoice tool ----------

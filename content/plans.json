@@ -1,0 +1,136 @@
+{
+  "plans": [
+    {
+      "id": "care",
+      "brand": "SIDDHI",
+      "name": "Care Plan",
+      "tagline": "For parents who need steady, everyday support",
+      "price": "₹79,999",
+      "unit": "/year",
+      "note": "15 visits included",
+      "description": "A steady base of visits across the year, for everyday support.",
+      "features": [
+        "15 care visits per year",
+        "4 hours per visit",
+        "Dedicated care coordinator",
+        "Family WhatsApp updates",
+        "Covers both parents",
+        "Medical & Hospital Support",
+        "Emergency Support",
+        "Well-Being Checking On Call",
+        "24/7 On-Call Support",
+        "Logistics Support",
+        "Paperwork & Billing Support",
+        "Traveling Support"
+      ],
+      "featured": false,
+      "ribbon": "",
+      "visible": true
+    },
+    {
+      "id": "care-plus",
+      "brand": "SIDDHI",
+      "name": "Care Plus Plan",
+      "tagline": "For families who want closer, ongoing support",
+      "price": "₹1,18,000",
+      "unit": "/year",
+      "note": "25 visits included",
+      "description": "More frequent visits for families who want closer, ongoing support.",
+      "features": [
+        "25 care visits per year",
+        "4 hours per visit",
+        "Dedicated care coordinator",
+        "Family WhatsApp updates",
+        "Covers both parents",
+        "Medical & Hospital Support",
+        "Emergency Support",
+        "Well-Being Checking On Call",
+        "24/7 On-Call Support",
+        "Logistics Support",
+        "Paperwork & Billing Support",
+        "Traveling Support"
+      ],
+      "featured": true,
+      "ribbon": "Best Value",
+      "visible": true
+    }
+  ],
+  "addons": [
+    {
+      "id": "overnight-care",
+      "icon": "clock",
+      "title": "Overnight Care",
+      "quote": "The first few nights home are when families worry most.",
+      "bullets": [
+        "An attendant stays through the night",
+        "After a surgery, fall, or hospital discharge"
+      ],
+      "price": "",
+      "visible": true
+    },
+    {
+      "id": "vitals-diabetes-monitoring",
+      "icon": "pulse",
+      "title": "Vitals & Diabetes Monitoring",
+      "quote": "Small daily checks catch the big problems early.",
+      "bullets": [
+        "Regular health monitoring and medicine management",
+        "For parents with diabetes, BP, and cardiac conditions",
+        "Under direct coordinator observation, with regular attendance checks"
+      ],
+      "price": "",
+      "visible": true
+    },
+    {
+      "id": "post-surgery-recovery",
+      "icon": "plus",
+      "title": "Post-Surgery Recovery",
+      "quote": "Recovery goes better with someone keeping track.",
+      "bullets": [
+        "Extra visits during the recovery window",
+        "Mobility support at home",
+        "Follow-up scheduling with doctors"
+      ],
+      "price": "",
+      "visible": true
+    },
+    {
+      "id": "physiotherapy-coordination",
+      "icon": "heart",
+      "title": "Physiotherapy Coordination",
+      "quote": "Therapy only works when the sessions actually happen.",
+      "bullets": [
+        "Scheduling of physiotherapy sessions",
+        "At home or at a clinic",
+        "Follow-through so no session is missed"
+      ],
+      "price": "",
+      "visible": true
+    },
+    {
+      "id": "travel-outstation-support",
+      "icon": "bag",
+      "title": "Travel & Outstation Support",
+      "quote": "Every journey planned, so your parents travel at ease.",
+      "bullets": [
+        "Journeys to a specialist",
+        "A hometown visit or a family event"
+      ],
+      "price": "",
+      "visible": true
+    },
+    {
+      "id": "nursing-support",
+      "icon": "people",
+      "title": "Nursing Support",
+      "quote": "Qualified hands for the medical moments.",
+      "bullets": [
+        "Qualified nursing visits",
+        "Wound care and injections",
+        "Short-term medical needs"
+      ],
+      "price": "",
+      "visible": true
+    }
+  ]
+}

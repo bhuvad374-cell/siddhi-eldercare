@@ -3,6 +3,7 @@ const path = require('path');
 const { getSession } = require('../lib/auth');
 const { commitJsonFile, readJsonFile } = require('../lib/github');
 const { validateTestimonials } = require('../lib/testimonials');
+const { validatePlans } = require('../lib/plans');
 
 // Whitelist of editable pages — prevents path traversal and keeps the admin
 // UI's page picker in sync with what's actually wired up to data-k attributes.
@@ -29,9 +30,9 @@ module.exports = async (req, res) => {
     }
     // Testimonials are added/removed in whole entries, so the admin must see the
     // newest saved version even before Vercel finishes redeploying.
-    if (page === 'testimonials') {
+    if (page === 'testimonials' || page === 'plans') {
       try {
-        const live = await readJsonFile('content/testimonials.json');
+        const live = await readJsonFile(`content/${page}.json`);
         if (live) {
           res.status(200).json({ page, data: live });
           return;
@@ -73,6 +74,14 @@ module.exports = async (req, res) => {
     // Testimonials are rendered into static HTML at build time, so they get
     // validated (and cleaned) here before anything is committed.
     let toSave = data;
+    if (page === 'plans') {
+      const check = validatePlans(data);
+      if (!check.ok) {
+        res.status(400).json({ error: check.error });
+        return;
+      }
+      toSave = check.data;
+    }
     if (page === 'testimonials') {
       const check = validateTestimonials(data);
       if (!check.ok) {

@@ -11,9 +11,11 @@ const fs = require('fs');
 const path = require('path');
 const cheerio = require('cheerio');
 const { renderTestimonials } = require('../lib/testimonials');
+const { renderPlanCards, renderAddonCards } = require('../lib/plans');
 
 const ROOT = path.join(__dirname, '..');
-const PAGES = ['index', 'services', 'plans', 'team', 'contact'];
+// 'plans' is rendered separately below (marker blocks), not via data-k.
+const PAGES = ['index', 'services', 'team', 'contact'];
 
 function getByPath(obj, keyPath) {
   return keyPath.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
@@ -96,3 +98,41 @@ function renderTestimonialsPage() {
 }
 
 renderTestimonialsPage();
+
+// ---------------------------------------------------------------------------
+// plans.html — plan cards and add-on cards are generated from
+// content/plans.json between PLANS / ADDONS marker comments (plain string
+// replacement, so nothing else in the file is touched and reruns are safe).
+// ---------------------------------------------------------------------------
+function renderPlansPage() {
+  const htmlPath = path.join(ROOT, 'plans.html');
+  const jsonPath = path.join(ROOT, 'content', 'plans.json');
+  if (!fs.existsSync(htmlPath) || !fs.existsSync(jsonPath)) {
+    console.log('[inject-content] skip plans: missing plans.html or content/plans.json');
+    return;
+  }
+  const data = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+  let html = fs.readFileSync(htmlPath, 'utf8');
+  const original = html;
+
+  function fill(name, body) {
+    const START = `<!-- ${name}:START -->`;
+    const END = `<!-- ${name}:END -->`;
+    const a = html.indexOf(START);
+    const b = html.indexOf(END);
+    if (a === -1 || b === -1 || b < a) {
+      console.warn(`[inject-content] plans.html: ${name} markers not found — nothing rendered`);
+      return;
+    }
+    html = html.slice(0, a + START.length) + '\n' + body + '\n        ' + html.slice(b);
+  }
+  fill('PLANS', renderPlanCards(data));
+  fill('ADDONS', renderAddonCards(data));
+
+  if (html !== original) fs.writeFileSync(htmlPath, html);
+  const p = Array.isArray(data.plans) ? data.plans.length : 0;
+  const a = Array.isArray(data.addons) ? data.addons.length : 0;
+  console.log(`[inject-content] plans.html: rendered ${p} plan(s), ${a} add-on(s)`);
+}
+
+renderPlansPage();

@@ -365,3 +365,6 @@
 
 /* ---------- FAQ spacing (reuses .faq-item) ---------- */
 .pp-faq{ padding: 88px 0; }
+
+/* Optional add-on price line (set from the admin) */
+.pp-addon-price{ margin: 0 0 12px; font-weight: 700; font-size: 0.95rem; color: var(--pine-dark); }
