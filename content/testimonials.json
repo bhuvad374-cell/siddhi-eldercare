@@ -1,19 +1,6 @@
 {
   "reviews": [
     {
-      "id": "test",
-      "name": "test",
-      "relation": "test",
-      "city": "mumbai",
-      "rating": 5,
-      "text": "test",
-      "videoUrl": "",
-      "vertical": false,
-      "thumbnail": "",
-      "featured": false,
-      "visible": false
-    },
-    {
       "id": "sharmila",
       "name": "Sharmila",
       "relation": "",
