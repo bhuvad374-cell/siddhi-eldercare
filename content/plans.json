@@ -23,7 +23,7 @@
         "Paperwork & Billing Support",
         "Traveling Support"
       ],
-      "featured": false,
+      "featured": true,
       "ribbon": "",
       "visible": true
     },
@@ -50,7 +50,7 @@
         "Paperwork & Billing Support",
         "Traveling Support"
       ],
-      "featured": true,
+      "featured": false,
       "ribbon": "Best Value",
       "visible": true
     }
